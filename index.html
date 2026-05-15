@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<title>CalendApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f2f2f7;--surface:#fff;--surface2:#f2f2f7;--fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.08);
+  --sep:rgba(60,60,67,.12);--label:#000;--label2:rgba(60,60,67,.6);--label3:rgba(60,60,67,.3);
+  --accent:#007aff;--green:#34c759;--red:#ff3b30;--orange:#ff9500;
+  --radius:12px;--radius-lg:16px;--radius-xl:20px;
+  --font:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  --safe-bottom:env(safe-area-inset-bottom,0px);--safe-top:env(safe-area-inset-top,0px);
+  --tab-h:83px;
+}
+html,body,#root{height:100%;width:100%;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--label);-webkit-font-smoothing:antialiased}
+button{font-family:var(--font);cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font-family:var(--font);-webkit-appearance:none}
+
+.app{height:100%;display:flex;flex-direction:column;max-width:430px;margin:0 auto;background:var(--bg);position:relative;overflow:hidden}
+@media(min-width:768px){.app{max-width:100%;flex-direction:row}:root{--tab-h:0px}}
+
+/* nav bar */
+.nav-bar{padding:calc(var(--safe-top) + 10px) 20px 10px;background:rgba(242,242,247,.9);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:.5px solid var(--sep);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;z-index:10}
+.nav-logo{font-size:17px;font-weight:700;color:var(--accent);letter-spacing:-.5px}
+.nav-page{font-size:13px;color:var(--label2)}
+@media(min-width:768px){.nav-bar{display:none}}
+
+/* tab bar */
+.tab-bar{height:var(--tab-h);padding-bottom:var(--safe-bottom);background:rgba(249,249,249,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--sep);display:flex;align-items:flex-start;padding-top:8px;flex-shrink:0;z-index:10}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:0 4px;cursor:pointer;color:var(--label3);transition:color .15s;-webkit-user-select:none;user-select:none}
+.tab-item.active{color:var(--accent)}
+.tab-icon{font-size:23px;line-height:1}
+.tab-lbl{font-size:10px;font-weight:500;letter-spacing:.1px}
+@media(min-width:768px){
+  .tab-bar{width:260px;height:100%;flex-direction:column;border-top:none;border-right:.5px solid var(--sep);padding:0;padding-top:24px;align-items:stretch;background:rgba(255,255,255,.95)}
+  .tab-item{flex:none;flex-direction:row;gap:12px;padding:11px 18px;justify-content:flex-start;border-radius:10px;margin:1px 8px}
+  .tab-item.active{background:var(--fill);color:var(--accent)}
+  .tab-icon{font-size:19px}
+  .tab-lbl{font-size:14px;font-weight:400}
+  .tab-bar-logo{padding:0 18px 16px;font-size:20px;font-weight:700;color:var(--accent);letter-spacing:-.5px;display:block}
+  .content{order:1}
+}
+
+/* content */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--tab-h) + 4px)}
+.content::-webkit-scrollbar{display:none}
+@media(min-width:768px){.content{padding-bottom:0}}
+
+/* page */
+.page-hdr{padding:20px 16px 4px;font-size:28px;font-weight:700;letter-spacing:-.5px}
+.page-sub{font-size:15px;color:var(--label2);padding:0 16px 16px}
+.section-lbl{padding:20px 16px 8px;font-size:13px;font-weight:600;color:var(--label2);text-transform:uppercase;letter-spacing:.5px}
+
+/* cards */
+.card{background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;margin:0 16px 16px}
+.list-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:.5px solid var(--sep);transition:background .1s;-webkit-user-select:none;user-select:none}
+.list-item:last-child{border-bottom:none}
+.list-item:active{background:var(--fill2)}
+.list-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.list-content{flex:1;min-width:0}
+.list-title{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.list-sub{font-size:13px;color:var(--label2);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 4px}
+.stat-card{background:var(--surface);border-radius:var(--radius-lg);padding:16px}
+.stat-val{font-size:30px;font-weight:700;letter-spacing:-.5px}
+.stat-lbl{font-size:13px;color:var(--label2);margin-top:2px}
+
+/* badge */
+.badge{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:500}
+.b-green{background:#d1f2db;color:#1a7a35}
+.b-blue{background:#dbeeff;color:#0055cc}
+.b-red{background:#ffe5e3;color:#cc2200}
+.b-gray{background:var(--fill);color:var(--label2)}
+.b-orange{background:#fff0d9;color:#a05000}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:var(--radius);font-size:16px;font-weight:500;cursor:pointer;border:none;transition:opacity .15s}
+.btn:active{opacity:.7}
+.btn-blue{background:var(--accent);color:#fff}
+.btn-fill{background:var(--fill);color:var(--label)}
+.btn-full{width:100%}
+.btn-sm{padding:7px 14px;font-size:14px;border-radius:9px}
+
+/* pending */
+.pending-card{background:var(--surface);border-radius:var(--radius-lg);margin:0 16px 16px;overflow:hidden;border-left:3px solid var(--orange)}
+.pending-hdr{padding:11px 14px 8px;font-size:13px;font-weight:600;color:var(--orange)}
+.pending-item{padding:10px 14px;border-top:.5px solid var(--sep);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pending-name{font-size:15px;font-weight:500}
+.pending-date{font-size:12px;color:var(--label2);margin-top:1px}
+.pending-btns{display:flex;gap:6px;flex-shrink:0}
+.pb-yes{padding:6px 14px;border-radius:20px;font-size:13px;font-weight:500;background:var(--green);color:#fff;border:none;cursor:pointer}
+.pb-no{padding:6px 12px;border-radius:20px;font-size:13px;font-weight:500;background:var(--fill);color:var(--label2);border:none;cursor:pointer}
+
+/* chat */
+.chat-wrap{display:flex;flex-direction:column;height:100%}
+.chat-msgs{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.chat-msgs::-webkit-scrollbar{display:none}
+.msg-row{display:flex;gap:8px;animation:mi .2s ease}
+@keyframes mi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.msg-row.user{flex-direction:row-reverse}
+.msg-av{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;margin-top:2px}
+.msg-av.agent{background:var(--accent);color:#fff}
+.msg-av.user{background:var(--fill);color:var(--label2)}
+.bubble{max-width:80%;padding:10px 14px;border-radius:18px;font-size:15px;line-height:1.45}
+.bubble.agent{background:var(--surface);color:var(--label);border-bottom-left-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.07)}
+.bubble.user{background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.bubble p{margin-bottom:4px}.bubble p:last-child{margin-bottom:0}
+.bubble strong{font-weight:600}
+.bubble ul{padding-left:16px;margin:3px 0}.bubble ul li{margin-bottom:2px}
+.typing-dots{display:flex;gap:4px;align-items:center;padding:10px 4px}
+.typing-dots span{width:7px;height:7px;border-radius:50%;background:var(--label3);animation:blink 1.2s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.error-bubble{background:#ffe5e3;color:#cc2200;padding:10px 14px;border-radius:12px;font-size:14px;margin-top:4px}
+
+/* chat input */
+.chat-input-bar{padding:8px 12px calc(8px + var(--safe-bottom));background:rgba(242,242,247,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--sep);flex-shrink:0}
+.chips-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
+.chips-scroll::-webkit-scrollbar{display:none}
+.chip{padding:5px 13px;border-radius:20px;font-size:13px;background:var(--surface);border:.5px solid var(--sep);color:var(--label2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.chip:active{background:var(--fill)}
+.input-row{display:flex;gap:8px;align-items:flex-end}
+.input-pill{flex:1;background:var(--surface);border:.5px solid var(--sep);border-radius:22px;padding:8px 14px;display:flex;align-items:flex-end;gap:8px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.chat-ta{flex:1;background:none;border:none;font-size:15px;color:var(--label);resize:none;max-height:100px;line-height:1.4;outline:none}
+.chat-ta::placeholder{color:var(--label3)}
+.send-btn{width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;transition:all .15s}
+.send-btn:disabled{background:var(--fill);cursor:not-allowed}
+.send-btn:active{transform:scale(.92)}
+
+/* chat widgets */
+.cw{background:var(--surface);border-radius:var(--radius-lg);overflow:hidden;margin-top:6px;box-shadow:0 1px 4px rgba(0,0,0,.07);max-width:320px}
+.cw-hdr{padding:9px 13px;border-bottom:.5px solid var(--sep);font-size:13px;font-weight:600;background:var(--fill2)}
+.cw-body{padding:11px 13px}
+.cw-stats{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.cw-stat{background:var(--fill2);border-radius:9px;padding:9px 11px}
+.cw-stat-val{font-size:20px;font-weight:700}
+.cw-stat-lbl{font-size:10.5px;color:var(--label2);text-transform:uppercase;letter-spacing:.3px}
+.cw-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:.5px solid var(--sep)}
+.cw-row:last-child{border-bottom:none}
+.cw-time{font-size:12px;color:var(--label2);min-width:38px;flex-shrink:0}
+.cw-name{flex:1;font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;margin-bottom:8px}
+.mc-hdr{text-align:center;font-size:10px;color:var(--label2);padding:2px 0;font-weight:500}
+.mc-cell{text-align:center;font-size:11.5px;padding:2px 0;border-radius:50%;min-height:20px;line-height:20px;width:20px;margin:0 auto}
+.mc-cell.today{background:var(--accent);color:#fff;font-weight:600}
+.mc-cell.other{color:var(--label3)}
+.mc-dot{width:4px;height:4px;border-radius:50%;background:var(--accent);margin:1px auto 0}
+.mc-cell.today .mc-dot{background:rgba(255,255,255,.7)}
+.notif-row{display:flex;gap:7px;margin-top:8px;flex-wrap:wrap}
+.n-wa{padding:7px 13px;border-radius:20px;font-size:13px;font-weight:500;background:#d1f5c0;color:#1a5c14;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+.n-em{padding:7px 13px;border-radius:20px;font-size:13px;font-weight:500;background:#dbe8ff;color:#0044bb;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+
+/* auth */
+.auth-wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;overflow-y:auto}
+.auth-logo-wrap{text-align:center;margin-bottom:28px}
+.auth-logo-icon{width:70px;height:70px;background:var(--accent);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;font-size:34px;margin-bottom:10px;box-shadow:0 4px 20px rgba(0,122,255,.25)}
+.auth-name{font-size:26px;font-weight:700;letter-spacing:-.6px}
+.auth-tagline{font-size:14px;color:var(--label2);margin-top:2px}
+.auth-card{width:100%;max-width:370px;background:var(--surface);border-radius:var(--radius-xl);padding:22px}
+.auth-seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin-bottom:18px}
+.auth-seg-btn{flex:1;padding:7px;border-radius:7px;font-size:14px;font-weight:500;color:var(--label2);background:none;border:none;cursor:pointer;transition:all .15s}
+.auth-seg-btn.active{background:var(--surface);color:var(--label);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:13px;font-weight:500;color:var(--label2);margin-bottom:5px}
+.fi{width:100%;padding:11px 13px;border:none;border-radius:var(--radius);background:var(--fill2);font-size:16px;color:var(--label)}
+.fi:focus{background:var(--fill);outline:none}
+.err-msg{font-size:13px;color:var(--red);margin-bottom:10px;padding:10px 12px;background:#ffe5e3;border-radius:9px}
+
+/* profile */
+.profile-hdr{padding:24px 16px 12px;text-align:center}
+.profile-av{width:72px;height:72px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;margin:0 auto 10px}
+.profile-name{font-size:20px;font-weight:600;letter-spacing:-.3px}
+.profile-spec{font-size:14px;color:var(--label2);margin-top:2px}
+
+/* toggle */
+.toggle-wrap{width:51px;height:31px;position:relative;flex-shrink:0;cursor:pointer}
+.toggle-wrap input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--fill);border-radius:16px;transition:background .2s}
+.toggle-wrap input:checked+.toggle-track{background:var(--green)}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:27px;height:27px;background:#fff;border-radius:50%;box-shadow:0 2px 4px rgba(0,0,0,.25);transition:transform .2s;pointer-events:none}
+.toggle-wrap input:checked~.toggle-thumb{transform:translateX(20px)}
+
+/* loading */
+.loading-wrap{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--bg)}
+.loading-icon{width:56px;height:56px;background:var(--accent);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{createClient}=supabase;
+const{useState,useEffect,useRef}=React;
+
+// Keys loaded from localStorage (set on first run)
+function getConfig(){
+  return{
+    supaUrl: localStorage.getItem('ca_supa_url')||'',
+    supaKey: localStorage.getItem('ca_supa_key')||'',
+    groqKey: localStorage.getItem('ca_groq_key')||'',
+  };
+}
+const GROQ_URL='https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL='llama-3.1-8b-instant';
+const _cfg=getConfig();
+const sb=createClient(_cfg.supaUrl,_cfg.supaKey);
+
+const DAYS_ES=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const DAYS_FULL=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const MONTHS_ES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const STATUS_LABEL={scheduled:'Programada',completed:'Realizada',no_show:'No asistió',cancelled:'Cancelada'};
+const STATUS_BADGE={scheduled:'b-green',completed:'b-blue',no_show:'b-red',cancelled:'b-gray'};
+
+/* ── DB helpers ── */
+async function dbCtx(pid){
+  const now=new Date();
+  const t0=new Date(now);t0.setHours(0,0,0,0);
+  const t1=new Date(now);t1.setHours(23,59,59,999);
+  const w1=new Date(now);w1.setDate(w1.getDate()+7);
+  const[{data:clients},{data:s_today},{data:s_week},{data:s_pending},{data:s_unpaid},{data:pack_types},{data:wh}]=await Promise.all([
+    sb.from('clients').select('id,full_name,email,whatsapp').eq('practitioner_id',pid).eq('is_active',true).order('full_name'),
+    sb.from('sessions').select('*,clients(full_name,whatsapp,email)').eq('practitioner_id',pid).gte('scheduled_at',t0.toISOString()).lte('scheduled_at',t1.toISOString()).order('scheduled_at'),
+    sb.from('sessions').select('*,clients(full_name,whatsapp,email)').eq('practitioner_id',pid).eq('status','scheduled').gt('scheduled_at',now.toISOString()).lte('scheduled_at',w1.toISOString()).order('scheduled_at'),
+    sb.from('sessions').select('*,clients(full_name,whatsapp,email)').eq('practitioner_id',pid).eq('status','scheduled').lt('scheduled_at',now.toISOString()),
+    sb.from('sessions').select('*,clients(full_name,whatsapp,email)').eq('practitioner_id',pid).eq('is_paid',false).neq('status','cancelled').neq('status','no_show').order('scheduled_at'),
+    sb.from('pack_types').select('*').eq('practitioner_id',pid).eq('is_active',true),
+    sb.from('working_hours').select('*').eq('practitioner_id',pid).order('day_of_week'),
+  ]);
+  return{clients:clients||[],s_today:s_today||[],s_week:s_week||[],s_pending:s_pending||[],s_unpaid:s_unpaid||[],pack_types:pack_types||[],wh:wh||[],now:now.toISOString()};
+}
+async function dbSessions(pid,from,to){
+  const{data}=await sb.from('sessions').select('*,clients(full_name,whatsapp,email),client_packs(pack_types(name))').eq('practitioner_id',pid).gte('scheduled_at',from).lte('scheduled_at',to).order('scheduled_at');
+  return data||[];
+}
+
+/* ── Tool definitions (OpenAI/Groq format) ── */
+const TOOLS=[
+  {type:'function',function:{name:'get_dashboard',description:'Obtiene sesiones de hoy, próxima semana, pendientes de confirmar y sin cobrar. Usar al saludar o pedir resumen.',parameters:{type:'object',properties:{},required:[]}}},
+  {type:'function',function:{name:'get_calendar',description:'Obtiene sesiones para un rango de fechas para mostrar calendario.',parameters:{type:'object',properties:{from:{type:'string',description:'YYYY-MM-DD'},to:{type:'string',description:'YYYY-MM-DD'}},required:['from','to']}}},
+  {type:'function',function:{name:'create_client',description:'Registra un nuevo cliente. SIEMPRE pedir nombre completo, email Y whatsapp antes de llamar esta función. Los tres son obligatorios.',parameters:{type:'object',properties:{full_name:{type:'string',description:'Nombre completo'},email:{type:'string',description:'Email del cliente'},whatsapp:{type:'string',description:'WhatsApp con código de país ej: +5215512345678'},notes:{type:'string',description:'Notas opcionales'}},required:['full_name','email','whatsapp']}}},
+  {type:'function',function:{name:'create_session',description:'Agenda una sesión. Resuelve nombre de cliente a client_id desde el contexto.',parameters:{type:'object',properties:{client_id:{type:'string'},scheduled_at:{type:'string',description:'ISO datetime'},duration_minutes:{type:'number'},client_pack_id:{type:'string'},standalone_price:{type:'number'},notes:{type:'string'}},required:['client_id','scheduled_at']}}},
+  {type:'function',function:{name:'mark_session_done',description:'Marca sesión como completed, no_show o cancelled.',parameters:{type:'object',properties:{session_id:{type:'string'},status:{type:'string',enum:['completed','no_show','cancelled']}},required:['session_id','status']}}},
+  {type:'function',function:{name:'mark_paid',description:'Cambia estado de pago de una sesión.',parameters:{type:'object',properties:{session_id:{type:'string'},is_paid:{type:'boolean'}},required:['session_id','is_paid']}}},
+  {type:'function',function:{name:'create_pack_type',description:'Crea un tipo de paquete reutilizable.',parameters:{type:'object',properties:{name:{type:'string'},session_count:{type:'number'},price:{type:'number'}},required:['name','session_count','price']}}},
+  {type:'function',function:{name:'assign_pack',description:'Asigna un tipo de paquete a un cliente.',parameters:{type:'object',properties:{client_id:{type:'string'},pack_type_id:{type:'string'},is_paid:{type:'boolean'}},required:['client_id','pack_type_id']}}},
+  {type:'function',function:{name:'send_reminder',description:'Genera links de recordatorio WhatsApp y email para una sesión.',parameters:{type:'object',properties:{session_id:{type:'string'}},required:['session_id']}}},
+];
+
+/* ── Tool executor ── */
+async function runTool(name,args,pid,ctx){
+  if(name==='get_dashboard'){const d=await dbCtx(pid);return{type:'dashboard',data:d};}
+  if(name==='get_calendar'){const sessions=await dbSessions(pid,args.from+'T00:00:00',args.to+'T23:59:59');return{type:'calendar',data:{sessions,from:args.from,to:args.to}};}
+  if(name==='create_client'){
+    const row={practitioner_id:pid,full_name:args.full_name,email:args.email,whatsapp:args.whatsapp};
+    if(args.notes&&args.notes!=='null')row.notes=args.notes;
+    const{data,error}=await sb.from('clients').insert(row).select().single();
+    if(error)throw error;
+    return{type:'client_created',data};
+  }
+  if(name==='create_session'){
+    const row={practitioner_id:pid,client_id:args.client_id,scheduled_at:args.scheduled_at,duration_minutes:args.duration_minutes||60};
+    if(args.client_pack_id&&args.client_pack_id!=='null')row.client_pack_id=args.client_pack_id;
+    if(args.standalone_price!=null&&args.standalone_price!=='null')row.standalone_price=args.standalone_price;
+    if(args.notes&&args.notes!=='null')row.notes=args.notes;
+    const{data,error}=await sb.from('sessions').insert(row).select('*,clients(full_name,whatsapp,email)').single();
+    if(error)throw error;
+    return{type:'session_created',data};
+  }
+  if(name==='mark_session_done'){const{data,error}=await sb.from('sessions').update({status:args.status}).eq('id',args.session_id).select('*,clients(full_name,whatsapp,email)').single();if(error)throw error;return{type:'session_updated',data};}
+  if(name==='mark_paid'){const{data,error}=await sb.from('sessions').update({is_paid:args.is_paid}).eq('id',args.session_id).select('*,clients(full_name,whatsapp,email)').single();if(error)throw error;return{type:'session_updated',data};}
+  if(name==='create_pack_type'){const{data,error}=await sb.from('pack_types').insert({practitioner_id:pid,name:args.name,session_count:args.session_count,price:args.price}).select().single();if(error)throw error;return{type:'pack_created',data};}
+  if(name==='assign_pack'){const{data:pt}=await sb.from('pack_types').select('*').eq('id',args.pack_type_id).single();const{data,error}=await sb.from('client_packs').insert({client_id:args.client_id,pack_type_id:args.pack_type_id,sessions_total:pt.session_count,sessions_remaining:pt.session_count,price_paid:pt.price,is_paid:args.is_paid||false}).select().single();if(error)throw error;return{type:'pack_assigned',data};}
+  if(name==='send_reminder'){const all=[...(ctx?.s_today||[]),...(ctx?.s_week||[])];const s=all.find(x=>x.id===args.session_id);return{type:'reminder',data:s||null};}
+  return{type:'unknown'};
+}
+
+/* ── Groq agent loop (OpenAI-compatible) ── */
+function buildSys(p,ctx){
+  const now=new Date();
+  return`Eres CalendApp, el asistente IA de ${p.full_name} (${p.specialty||'profesional independiente'}). Respondes siempre en español neutro, de forma concisa, cálida y directa. Máximo 3 oraciones de texto por respuesta. Los datos se muestran en widgets visuales, no los repitas en texto.
+
+FECHA Y HORA: ${now.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} ${now.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}
+CLIENTES (id:nombre): ${(ctx.clients||[]).map(c=>`${c.id}:${c.full_name}`).join(' | ')||'ninguno'}
+HOY: ${(ctx.s_today||[]).map(s=>`${s.id}:${s.clients?.full_name} ${new Date(s.scheduled_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})} [${s.status}]`).join('|')||'0 sesiones'}
+CONFIRMAR: ${(ctx.s_pending||[]).map(s=>`${s.id}:${s.clients?.full_name}`).join('|')||'ninguna'}
+COBRAR: ${(ctx.s_unpaid||[]).map(s=>`${s.id}:${s.clients?.full_name}`).join('|')||'ninguna'}
+PAQUETES: ${(ctx.pack_types||[]).map(p=>`${p.id}:${p.name}`).join('|')||'ninguno'}
+
+REGLAS:
+- Usa siempre las herramientas para leer y escribir datos reales. Nunca inventes IDs.
+- Al marcar sesiones usa el session_id exacto del contexto.
+- CREAR CLIENTE: SIEMPRE pedir los tres datos antes de llamar create_client: 1) nombre completo, 2) email, 3) WhatsApp (con código de país). Pregúntalos todos juntos en un solo mensaje si no los tienes. Solo llama create_client cuando tengas los tres.
+- BUSCAR CLIENTE: cuando el usuario mencione un nombre para asignar sesión, pack o recordatorio, busca coincidencias en la lista de clientes. Si hay UNA coincidencia clara, úsala directamente. Si hay DOS O MÁS coincidencias o el nombre es ambiguo, responde EXACTAMENTE con este formato JSON en tu mensaje (sin texto extra antes ni después): {"action":"select_client","matches":[{"id":"uuid","name":"Nombre Completo"},...],"intent":"create_session","intent_data":{}} — donde intent es lo que el usuario quería hacer y intent_data son los otros datos ya conocidos (fecha, hora, etc). Si NO hay ninguna coincidencia y el usuario quiere asignar algo a ese cliente, dile que no existe y pregunta si desea crearlo.
+- Sé proactivo: si hay sesiones pendientes de confirmar o sin cobrar, menciónalo brevemente.
+- Cuando pidan ver calendario usa get_calendar.
+- Confirma acciones destructivas antes de ejecutarlas.`;
+}
+
+async function agentTurn(history,sys,pid,ctx){
+  const widgets=[];
+  // history format: [{role:'user'|'assistant'|'tool', content:...}]
+  let msgs=[{role:'system',content:sys},...history];
+
+  for(let i=0;i<6;i++){
+    const body={
+      model:GROQ_MODEL,
+      messages:msgs,
+      tools:TOOLS,
+      tool_choice:'auto',
+      max_tokens:400,
+      temperature:0.4,
+    };
+    const res=await fetch(GROQ_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${getConfig().groqKey}`},
+      body:JSON.stringify(body)
+    });
+    const d=await res.json();
+
+    if(d.error){
+      // Auto-retry on rate limit
+      if(d.error.message&&d.error.message.includes('Rate limit')){
+        const wait=d.error.message.match(/try again in ([\d.]+)s/);
+        const ms=wait?Math.ceil(parseFloat(wait[1])*1000)+200:3000;
+        await new Promise(r=>setTimeout(r,ms));
+        continue;
+      }
+      return{text:`Error: ${d.error.message}`,widgets:[],history:msgs};
+    }
+
+    const msg=d.choices?.[0]?.message;
+    if(!msg) return{text:'Sin respuesta del modelo.',widgets:[],history:msgs};
+
+    // Add assistant message to history
+    msgs=[...msgs,msg];
+
+    const toolCalls=msg.tool_calls||[];
+    if(toolCalls.length>0){
+      for(const tc of toolCalls){
+        let args={};
+        try{args=JSON.parse(tc.function.arguments||'{}');}catch(e){}
+        let tr;
+        try{tr=await runTool(tc.function.name,args,pid,ctx);}
+        catch(e){tr={type:'error',message:e.message};}
+        if(['dashboard','calendar','reminder'].includes(tr.type))widgets.push(tr);
+        msgs=[...msgs,{
+          role:'tool',
+          tool_call_id:tc.id,
+          content:JSON.stringify(tr)
+        }];
+      }
+      continue;
+    }
+
+    const text=msg.content||'';
+    return{text,widgets,history:msgs};
+  }
+  return{text:'No pude completar la acción. Intenta de nuevo.',widgets:[],history:msgs};
+}
+
+/* ── Widgets ── */
+function WDashboard({data}){
+  const{s_today,s_week,s_pending,s_unpaid}=data;
+  return(
+    <div className="cw">
+      <div className="cw-hdr">📊 Resumen</div>
+      <div className="cw-body">
+        <div className="cw-stats">
+          <div className="cw-stat"><div className="cw-stat-val">{s_today.length}</div><div className="cw-stat-lbl">Hoy</div></div>
+          <div className="cw-stat"><div className="cw-stat-val">{s_week.length}</div><div className="cw-stat-lbl">Esta semana</div></div>
+          <div className="cw-stat"><div className="cw-stat-val" style={{color:s_pending.length>0?'var(--orange)':'inherit'}}>{s_pending.length}</div><div className="cw-stat-lbl">Confirmar</div></div>
+          <div className="cw-stat"><div className="cw-stat-val" style={{color:s_unpaid.length>0?'var(--orange)':'inherit'}}>{s_unpaid.length}</div><div className="cw-stat-lbl">Sin cobrar</div></div>
+        </div>
+        {s_today.length>0?s_today.map(s=>(
+          <div key={s.id} className="cw-row">
+            <span className="cw-time">{new Date(s.scheduled_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span>
+            <span className="cw-name">{s.clients?.full_name}</span>
+            <span className={`badge ${STATUS_BADGE[s.status]}`} style={{fontSize:11}}>{STATUS_LABEL[s.status]}</span>
+          </div>
+        )):<div style={{fontSize:13,color:'var(--label2)'}}>Sin sesiones hoy.</div>}
+      </div>
+    </div>
+  );
+}
+
+function WCalendar({data}){
+  const{sessions,from}=data;
+  const base=new Date(from);const year=base.getFullYear(),month=base.getMonth();
+  const fd=new Date(year,month,1).getDay();
+  const dim=new Date(year,month+1,0).getDate();
+  const dip=new Date(year,month,0).getDate();
+  const cells=[];
+  for(let i=fd-1;i>=0;i--)cells.push({d:new Date(year,month-1,dip-i),other:true});
+  for(let i=1;i<=dim;i++)cells.push({d:new Date(year,month,i),other:false});
+  while(cells.length<35)cells.push({d:new Date(year,month+1,cells.length-fd-dim+1),other:true});
+  const today=new Date();
+  function gs(day){return sessions.filter(s=>{const d=new Date(s.scheduled_at);return d.getDate()===day.getDate()&&d.getMonth()===day.getMonth()&&d.getFullYear()===day.getFullYear();});}
+  return(
+    <div className="cw">
+      <div className="cw-hdr">📅 {MONTHS_ES[month]} {year}</div>
+      <div className="cw-body">
+        <div className="mc-grid">
+          {DAYS_ES.map(d=><div key={d} className="mc-hdr">{d}</div>)}
+          {cells.map((c,i)=>{const isT=!c.other&&c.d.toDateString()===today.toDateString();const ds=c.other?[]:gs(c.d);return(<div key={i}><div className={`mc-cell${c.other?' other':''}${isT?' today':''}`}>{c.d.getDate()}</div>{ds.length>0&&<div className="mc-dot"/>}</div>);})}
+        </div>
+        {sessions.slice(0,4).map(s=>(
+          <div key={s.id} className="cw-row">
+            <span className="cw-time">{new Date(s.scheduled_at).toLocaleDateString('es',{day:'numeric',month:'short'})}</span>
+            <span className="cw-name">{s.clients?.full_name}</span>
+            <span style={{fontSize:11.5,color:'var(--label2)'}}>{new Date(s.scheduled_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</span>
+          </div>
+        ))}
+        {sessions.length>4&&<div style={{fontSize:12,color:'var(--label2)',marginTop:4}}>+{sessions.length-4} más</div>}
+        {sessions.length===0&&<div style={{fontSize:13,color:'var(--label2)'}}>Sin sesiones en este período.</div>}
+      </div>
+    </div>
+  );
+}
+
+function WReminder({data}){
+  if(!data)return<div className="cw"><div className="cw-body" style={{fontSize:13,color:'var(--label2)'}}>No encontré la sesión.</div></div>;
+  const dt=new Date(data.scheduled_at);
+  const ds=dt.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'});
+  const ts=dt.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  const msg=encodeURIComponent(`Hola! Te recuerdo que tienes una sesión el ${ds} a las ${ts}. Cualquier consulta avísame 😊`);
+  const phone=data.clients?.whatsapp?.replace(/\D/g,'')||'';
+  return(
+    <div className="cw">
+      <div className="cw-hdr">🔔 Recordatorio — {data.clients?.full_name}</div>
+      <div className="cw-body">
+        <div style={{fontSize:13,color:'var(--label2)',marginBottom:8}}>{ds} · {ts}</div>
+        <div className="notif-row">
+          {phone&&<a href={`https://wa.me/${phone}?text=${msg}`} target="_blank" className="n-wa">📱 WhatsApp</a>}
+          {data.clients?.email&&<a href={`mailto:${data.clients.email}?subject=Recordatorio de sesión&body=${decodeURIComponent(msg)}`} className="n-em">✉ Email</a>}
+          {!phone&&!data.clients?.email&&<span style={{fontSize:13,color:'var(--label2)'}}>Sin contacto registrado.</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RWidget({w}){
+  if(w.type==='dashboard')return<WDashboard data={w.data}/>;
+  if(w.type==='calendar')return<WCalendar data={w.data}/>;
+  if(w.type==='reminder')return<WReminder data={w.data}/>;
+  return null;
+}
+
+/* ── Client Picker widget ── */
+function ClientPicker({matches,onSelect}){
+  return(
+    <div className="cw" style={{maxWidth:320}}>
+      <div className="cw-hdr">👥 ¿A cuál cliente te refieres?</div>
+      <div className="cw-body" style={{padding:'8px 0'}}>
+        {matches.map(m=>(
+          <div key={m.id} onClick={()=>onSelect(m)}
+            style={{padding:'11px 14px',borderBottom:'.5px solid var(--sep)',cursor:'pointer',display:'flex',alignItems:'center',gap:10,transition:'background .1s'}}
+            onMouseEnter={e=>e.currentTarget.style.background='var(--fill2)'}
+            onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+            <div style={{width:32,height:32,borderRadius:'50%',background:'var(--accent)',color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:600,flexShrink:0}}>
+              {m.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+            </div>
+            <span style={{fontSize:15,fontWeight:500}}>{m.name}</span>
+            <span style={{marginLeft:'auto',fontSize:20,color:'var(--accent)'}}>›</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Config Setup (first run) ── */
+function ConfigSetup({onDone}){
+  const[supaUrl,setSupaUrl]=useState('');
+  const[supaKey,setSupaKey]=useState('');
+  const[groqKey,setGroqKey]=useState('');
+  const[err,setErr]=useState('');
+
+  function save(e){
+    e.preventDefault();
+    if(!supaUrl||!supaKey||!groqKey){setErr('Todos los campos son obligatorios');return;}
+    localStorage.setItem('ca_supa_url',supaUrl.trim());
+    localStorage.setItem('ca_supa_key',supaKey.trim());
+    localStorage.setItem('ca_groq_key',groqKey.trim());
+    onDone();
+  }
+
+  return(
+    <div className="auth-wrap">
+      <div className="auth-logo-wrap">
+        <div className="auth-logo-icon">⚙️</div>
+        <div className="auth-name">CalendApp</div>
+        <div className="auth-tagline">Configuración inicial</div>
+      </div>
+      <form className="auth-card" onSubmit={save}>
+        <div style={{fontSize:13,color:'var(--label2)',marginBottom:16,lineHeight:1.5}}>
+          Esta información se guarda solo en tu dispositivo y nunca se comparte.
+        </div>
+        {err&&<div className="err-msg">{err}</div>}
+        <div className="fg">
+          <label className="fl">Supabase URL</label>
+          <input className="fi" placeholder="https://xxxx.supabase.co" value={supaUrl} onChange={e=>setSupaUrl(e.target.value)} required/>
+        </div>
+        <div className="fg">
+          <label className="fl">Supabase Anon Key</label>
+          <input className="fi" placeholder="eyJhbGci..." value={supaKey} onChange={e=>setSupaKey(e.target.value)} required/>
+        </div>
+        <div className="fg">
+          <label className="fl">Groq API Key</label>
+          <input className="fi" placeholder="gsk_..." value={groqKey} onChange={e=>setGroqKey(e.target.value)} required/>
+        </div>
+        <button type="submit" className="btn btn-blue btn-full" style={{marginTop:4}}>Guardar y continuar</button>
+      </form>
+    </div>
+  );
+}
+
+/* ── Auth ── */
+function Auth({onAuth}){
+  const[mode,setMode]=useState('login');
+  const[email,setEmail]=useState('');const[pass,setPass]=useState('');
+  const[name,setName]=useState('');const[spec,setSpec]=useState('');
+  const[loading,setLoading]=useState(false);const[err,setErr]=useState('');
+  const[info,setInfo]=useState('');
+
+
+  async function submit(e){
+    e.preventDefault();
+    setErr('');setInfo('');setLoading(true);
+    try{
+      const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+      if(error){
+        if(error.message.toLowerCase().includes('email not confirmed'))
+          setErr('Debes confirmar tu email. Revisa tu bandeja de entrada.');
+        else if(error.message.toLowerCase().includes('invalid login'))
+          setErr('Email o contraseña incorrectos.');
+        else
+          setErr(error.message);
+        setLoading(false);return;
+      }
+      if(data.session) onAuth(data.session);
+      else setErr('No se pudo iniciar sesión. Intenta de nuevo.');
+    }catch(e){
+      setErr('Error inesperado: '+e.message);
+    }
+    setLoading(false);
+  }
+
+  return(
+    <div className="auth-wrap">
+      <div className="auth-logo-wrap">
+        <div className="auth-logo-icon">📅</div>
+        <div className="auth-name">CalendApp</div>
+        <div className="auth-tagline">Tu asistente inteligente de sesiones</div>
+      </div>
+      <form className="auth-card" onSubmit={submit}>
+        <div className="auth-seg">
+          <button type="button" className={`auth-seg-btn${mode==='login'?' active':''}`} onClick={()=>{setMode('login');setErr('');setInfo('');}}>Iniciar sesión</button>
+          <button type="button" className={`auth-seg-btn${mode==='register'?' active':''}`} onClick={()=>{setMode('register');setErr('');setInfo('');}}>Registrarse</button>
+        </div>
+        {info&&<div style={{fontSize:13,color:'#1a7a35',background:'#d1f2db',padding:'10px 12px',borderRadius:9,marginBottom:12}}>{info}</div>}
+        {err&&<div className="err-msg">{err}</div>}
+        {mode==='register'&&<>
+          <div className="fg"><label className="fl">Nombre completo</label><input className="fi" value={name} onChange={e=>setName(e.target.value)} required/></div>
+          <div className="fg"><label className="fl">Especialidad</label><input className="fi" placeholder="Fisioterapeuta, Nutricionista…" value={spec} onChange={e=>setSpec(e.target.value)}/></div>
+        </>}
+        <div className="fg"><label className="fl">Email</label><input className="fi" type="email" value={email} onChange={e=>setEmail(e.target.value)} required/></div>
+        <div className="fg"><label className="fl">Contraseña</label><input className="fi" type="password" value={pass} onChange={e=>setPass(e.target.value)} required minLength={6}/></div>
+        <button type="submit" className="btn btn-blue btn-full" disabled={loading} style={{marginTop:4}}>{loading?'…':(mode==='login'?'Iniciar sesión':'Crear cuenta')}</button>
+        {mode==='login'&&<div style={{textAlign:'center',marginTop:12,fontSize:13,color:'var(--label2)'}}>¿No tienes cuenta? <span style={{color:'var(--accent)',cursor:'pointer'}} onClick={()=>{setMode('register');setErr('');setInfo('');}}>Regístrate</span></div>}
+      </form>
+    </div>
+  );
+}
+
+/* ── Chat tab ── */
+function ChatTab({practitioner,ctx,history,setHistory,onCtxRefresh}){
+  const[msgs,setMsgs]=useState([]);
+  const[input,setInput]=useState('');
+  const[thinking,setThinking]=useState(false);
+  const[error,setError]=useState(null);
+  const endRef=useRef(null);
+  const taRef=useRef(null);
+  const inited=useRef(false);
+
+  useEffect(()=>{if(practitioner&&ctx&&!inited.current){inited.current=true;greet();}},[practitioner,ctx]);
+  useEffect(()=>{endRef.current?.scrollIntoView({behavior:'smooth'})},[msgs,thinking]);
+
+  async function greet(){
+    setThinking(true);setError(null);
+    const sys=buildSys(practitioner,ctx);
+    const initH=[{role:'user',content:'Hola, acabo de abrir la app. Salúdame brevemente y usa get_dashboard para darme un resumen del día. Si hay pendientes de confirmar o sin cobrar, menciónalo.'}];
+    const result=await agentTurn(initH,sys,practitioner.id,ctx);
+    if(result.text||result.widgets.length>0){
+      setMsgs([{role:'assistant',text:result.text,widgets:result.widgets}]);
+      setHistory(result.history);
+    }
+    setThinking(false);
+  }
+
+  // Parse agent response — detect client disambiguation JSON
+  function parseAgentMsg(result){
+    const t=result.text||'';
+    // Look for {"action":"select_client",...} anywhere in the response
+    const match=t.match(/\{"action":"select_client".*\}/s);
+    if(match){
+      try{
+        const parsed=JSON.parse(match[0]);
+        if(parsed.action==='select_client'&&parsed.matches?.length>0){
+          return{type:'picker',matches:parsed.matches,intent:parsed.intent,intentData:parsed.intent_data||{}};
+        }
+      }catch(e){}
+    }
+    return{type:'text',text:t,widgets:result.widgets||[]};
+  }
+
+  async function send(text){
+    if(!text.trim()||thinking)return;
+    const t=text.trim();setInput('');setError(null);
+    if(taRef.current){taRef.current.style.height='auto';}
+    setMsgs(prev=>[...prev,{role:'user',text:t}]);
+    setThinking(true);
+    const freshCtx=await dbCtx(practitioner.id);
+    onCtxRefresh(freshCtx);
+    const sys=buildSys(practitioner,freshCtx);
+    const newH=[...history,{role:'user',content:t}];
+    const result=await agentTurn(newH,sys,practitioner.id,freshCtx);
+    if(result.text?.startsWith('Error:')){
+      setError(result.text);
+      setThinking(false);return;
+    }
+    const parsed=parseAgentMsg(result);
+    if(parsed.type==='picker'){
+      setMsgs(prev=>[...prev,{role:'assistant',text:'',widgets:[],picker:parsed}]);
+    } else {
+      setMsgs(prev=>[...prev,{role:'assistant',text:parsed.text,widgets:parsed.widgets}]);
+    }
+    setHistory(result.history);
+    setThinking(false);
+  }
+
+  async function onClientPicked(client,intent,intentData){
+    // Replace picker message with confirmation
+    setMsgs(prev=>prev.map(m=>m.picker?{...m,picker:null,text:`Cliente seleccionado: ${client.name}`}:m));
+    // Continue conversation with the selected client
+    const msg=`El cliente seleccionado es ${client.name} (ID: ${client.id}). Continúa con la acción: ${intent}. Datos adicionales: ${JSON.stringify(intentData)}`;
+    await send(msg);
+  }
+
+  function onKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send(input);}}
+  const initials=practitioner?.full_name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?';
+
+  function fmt(t){
+    if(!t)return null;
+    return t.split('\n').filter(l=>l.trim()).map((l,i)=>(
+      <p key={i} dangerouslySetInnerHTML={{__html:l.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>')}}/>
+    ));
+  }
+
+  const QUICK=['¿Qué tengo hoy?','Ver calendario','Por confirmar','Sin cobrar','Nueva sesión','Nuevo cliente'];
+
+  return(
+    <div className="chat-wrap">
+      <div className="chat-msgs">
+        {msgs.map((m,i)=>(
+          <div key={i} className={`msg-row${m.role==='user'?' user':''}`}>
+            <div className={`msg-av ${m.role==='user'?'user':'agent'}`}>{m.role==='user'?initials:'CA'}</div>
+            <div style={{maxWidth:'82%'}}>
+              {m.text&&<div className={`bubble ${m.role==='user'?'user':'agent'}`}>{fmt(m.text)}</div>}
+              {m.widgets&&m.widgets.map((w,wi)=><RWidget key={wi} w={w}/>)}
+              {m.picker&&<ClientPicker
+                matches={m.picker.matches}
+                onSelect={c=>onClientPicked(c,m.picker.intent,m.picker.intentData)}
+              />}
+            </div>
+          </div>
+        ))}
+        {thinking&&(
+          <div className="msg-row">
+            <div className="msg-av agent">CA</div>
+            <div className="bubble agent"><div className="typing-dots"><span/><span/><span/></div></div>
+          </div>
+        )}
+        {error&&<div className="error-bubble">⚠️ {error}</div>}
+        <div ref={endRef}/>
+      </div>
+      <div className="chat-input-bar">
+        <div className="chips-scroll">
+          {QUICK.map(q=><button key={q} className="chip" onClick={()=>send(q)}>{q}</button>)}
+        </div>
+        <div className="input-row">
+          <div className="input-pill">
+            <textarea ref={taRef} className="chat-ta" placeholder="Escribe lo que necesitas…" value={input} rows={1}
+              onChange={e=>{setInput(e.target.value);e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,100)+'px';}}
+              onKeyDown={onKey}/>
+          </div>
+          <button className="send-btn" onClick={()=>send(input)} disabled={thinking||!input.trim()}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Hoy tab ── */
+function HoyTab({practitioner,ctx,onCtxRefresh}){
+  async function markStatus(id,status){
+    await sb.from('sessions').update({status}).eq('id',id);
+    onCtxRefresh(await dbCtx(practitioner.id));
+  }
+  async function markPaid(id){
+    await sb.from('sessions').update({is_paid:true}).eq('id',id);
+    onCtxRefresh(await dbCtx(practitioner.id));
+  }
+  if(!ctx)return<div style={{padding:40,textAlign:'center',color:'var(--label2)'}}>Cargando…</div>;
+  const{s_today,s_pending,s_unpaid}=ctx;
+  const now=new Date();
+  return(
+    <div className="page">
+      <div className="page-hdr">Hoy</div>
+      <div className="page-sub">{now.toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'})}</div>
+      {s_pending.length>0&&(
+        <div className="pending-card">
+          <div className="pending-hdr">⏰ {s_pending.length} sesión{s_pending.length>1?'es':''} por confirmar</div>
+          {s_pending.map(s=>(
+            <div key={s.id} className="pending-item">
+              <div>
+                <div className="pending-name">{s.clients?.full_name}</div>
+                <div className="pending-date">{new Date(s.scheduled_at).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+              </div>
+              <div className="pending-btns">
+                <button className="pb-yes" onClick={()=>markStatus(s.id,'completed')}>✓ Sí</button>
+                <button className="pb-no" onClick={()=>markStatus(s.id,'no_show')}>✗ No</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="section-lbl">Sesiones de hoy</div>
+      <div className="card">
+        {s_today.length===0
+          ?<div style={{padding:'20px 16px',color:'var(--label2)',fontSize:15,textAlign:'center'}}>Sin sesiones programadas hoy</div>
+          :s_today.map(s=>(
+          <div key={s.id} className="list-item">
+            <div className="list-icon" style={{background:'var(--fill)'}}>
+              {s.status==='completed'?'✅':s.status==='no_show'?'❌':s.status==='cancelled'?'🚫':'📋'}
+            </div>
+            <div className="list-content">
+              <div className="list-title">{s.clients?.full_name}</div>
+              <div className="list-sub">{new Date(s.scheduled_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})} · {s.duration_minutes} min</div>
+            </div>
+            <span className={`badge ${s.is_paid?'b-green':'b-orange'}`} style={{fontSize:11,cursor:'pointer'}} onClick={()=>!s.is_paid&&markPaid(s.id)}>
+              {s.is_paid?'Cobrado':'Cobrar'}
+            </span>
+          </div>
+        ))}
+      </div>
+      {s_unpaid.length>0&&<>
+        <div className="section-lbl">Sin cobrar</div>
+        <div className="card">
+          {s_unpaid.map(s=>(
+            <div key={s.id} className="list-item" onClick={()=>markPaid(s.id)}>
+              <div className="list-icon" style={{background:'#fff0d9'}}>💰</div>
+              <div className="list-content">
+                <div className="list-title">{s.clients?.full_name}</div>
+                <div className="list-sub">{new Date(s.scheduled_at).toLocaleDateString('es',{day:'numeric',month:'short'})} · {s.standalone_price?`$${s.standalone_price}`:'Paquete'}</div>
+              </div>
+              <span style={{fontSize:13,color:'var(--accent)',fontWeight:500}}>Cobrar</span>
+            </div>
+          ))}
+        </div>
+      </>}
+    </div>
+  );
+}
+
+/* ── Agenda tab ── */
+function AgendaTab({practitioner}){
+  const[date,setDate]=useState(new Date());
+  const[sessions,setSessions]=useState([]);
+  const[loading,setLoading]=useState(true);
+
+  useEffect(()=>{if(practitioner)load();},[practitioner,date]);
+
+  async function load(){
+    setLoading(true);
+    const start=new Date(date.getFullYear(),date.getMonth(),1);
+    const end=new Date(date.getFullYear(),date.getMonth()+1,0,23,59,59);
+    const s=await dbSessions(practitioner.id,start.toISOString(),end.toISOString());
+    setSessions(s);setLoading(false);
+  }
+
+  const year=date.getFullYear(),month=date.getMonth();
+  const fd=new Date(year,month,1).getDay();
+  const dim=new Date(year,month+1,0).getDate();
+  const dip=new Date(year,month,0).getDate();
+  const cells=[];
+  for(let i=fd-1;i>=0;i--)cells.push({d:new Date(year,month-1,dip-i),other:true});
+  for(let i=1;i<=dim;i++)cells.push({d:new Date(year,month,i),other:false});
+  while(cells.length%7!==0)cells.push({d:new Date(year,month+1,cells.length-fd-dim+1),other:true});
+  const today=new Date();
+  function gs(day){return sessions.filter(s=>{const d=new Date(s.scheduled_at);return d.getDate()===day.getDate()&&d.getMonth()===day.getMonth()&&d.getFullYear()===day.getFullYear();});}
+
+  return(
+    <div className="page">
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'20px 16px 12px'}}>
+        <button className="btn btn-fill btn-sm" onClick={()=>setDate(new Date(year,month-1,1))}>‹</button>
+        <span style={{fontWeight:600,fontSize:17}}>{MONTHS_ES[month]} {year}</span>
+        <button className="btn btn-fill btn-sm" onClick={()=>setDate(new Date(year,month+1,1))}>›</button>
+      </div>
+      <div className="card" style={{margin:'0 16px 16px'}}>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',padding:'10px 10px 6px',gap:2}}>
+          {DAYS_ES.map(d=><div key={d} style={{textAlign:'center',fontSize:11,color:'var(--label2)',fontWeight:500,paddingBottom:6}}>{d}</div>)}
+          {cells.map((c,i)=>{
+            const isT=!c.other&&c.d.toDateString()===today.toDateString();
+            const ds=c.other?[]:gs(c.d);
+            return(
+              <div key={i} style={{textAlign:'center',padding:'2px 0',minHeight:38,display:'flex',flexDirection:'column',alignItems:'center'}}>
+                <div style={{width:30,height:30,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',background:isT?'var(--accent)':'transparent',color:c.other?'var(--label3)':isT?'#fff':'var(--label)',fontSize:14,fontWeight:isT?600:400}}>
+                  {c.d.getDate()}
+                </div>
+                {ds.length>0&&<div style={{width:5,height:5,borderRadius:'50%',background:isT?'rgba(255,255,255,.6)':'var(--accent)',marginTop:1}}/>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="section-lbl">Sesiones de {MONTHS_ES[month]}</div>
+      <div className="card">
+        {loading?<div style={{padding:20,textAlign:'center',color:'var(--label2)'}}>Cargando…</div>:
+        sessions.length===0?<div style={{padding:'20px 16px',color:'var(--label2)',fontSize:15,textAlign:'center'}}>Sin sesiones este mes</div>:
+        sessions.map(s=>(
+          <div key={s.id} className="list-item">
+            <div className="list-icon" style={{background:'var(--fill)'}}>
+              {s.status==='completed'?'✅':s.status==='no_show'?'❌':s.status==='cancelled'?'🚫':'📋'}
+            </div>
+            <div className="list-content">
+              <div className="list-title">{s.clients?.full_name}</div>
+              <div className="list-sub">{new Date(s.scheduled_at).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short'})} · {new Date(s.scheduled_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <span className={`badge ${STATUS_BADGE[s.status]}`} style={{fontSize:11}}>{STATUS_LABEL[s.status]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ── Perfil tab ── */
+function PerfilTab({practitioner,setPractitioner,onLogout}){
+  const[wh,setWh]=useState([]);
+  const[name,setName]=useState(practitioner?.full_name||'');
+  const[spec,setSpec]=useState(practitioner?.specialty||'');
+  const[price,setPrice]=useState(practitioner?.standalone_price||0);
+  const[saved,setSaved]=useState(false);
+
+  useEffect(()=>{if(practitioner)loadWH();},[practitioner]);
+  async function loadWH(){const{data}=await sb.from('working_hours').select('*').eq('practitioner_id',practitioner.id).order('day_of_week');setWh(data||[]);}
+  async function saveProfile(){const{data}=await sb.from('practitioners').update({full_name:name,specialty:spec,standalone_price:price}).eq('id',practitioner.id).select().single();setPractitioner(data);setSaved(true);setTimeout(()=>setSaved(false),2000);}
+  async function updateWH(id,field,val){setWh(prev=>prev.map(w=>w.id===id?{...w,[field]:val}:w));await sb.from('working_hours').update({[field]:val}).eq('id',id);}
+
+  const initials=practitioner?.full_name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()||'?';
+  return(
+    <div className="page" style={{paddingBottom:32}}>
+      <div className="profile-hdr">
+        <div className="profile-av">{initials}</div>
+        <div className="profile-name">{practitioner?.full_name}</div>
+        <div className="profile-spec">{practitioner?.specialty||'Profesional independiente'}</div>
+      </div>
+
+      <div className="section-lbl">Mi perfil</div>
+      <div className="card">
+        {[['Nombre',name,setName,'text'],['Especialidad',spec,setSpec,'text'],['Precio sesión suelta',price,setPrice,'number']].map(([lbl,val,setter,type])=>(
+          <div key={lbl} className="list-item" style={{flexDirection:'column',alignItems:'stretch',gap:4}}>
+            <div style={{fontSize:13,color:'var(--label2)'}}>{lbl}</div>
+            <input style={{border:'none',background:'none',fontSize:16,color:'var(--label)',padding:0,outline:'none',width:'100%'}} type={type} value={val} onChange={e=>setter(type==='number'?+e.target.value:e.target.value)}/>
+          </div>
+        ))}
+        <div className="list-item" style={{justifyContent:'center'}} onClick={saveProfile}>
+          <span style={{color:saved?'var(--green)':'var(--accent)',fontWeight:500,fontSize:16}}>{saved?'✓ Guardado':'Guardar cambios'}</span>
+        </div>
+      </div>
+
+      <div className="section-lbl">Horarios de atención</div>
+      <div className="card">
+        {wh.map(w=>(
+          <div key={w.id} className="list-item" style={{flexWrap:'wrap',gap:8}}>
+            <div style={{width:80,fontSize:15,color:w.is_active?'var(--label)':'var(--label2)',fontWeight:w.is_active?500:400}}>{DAYS_FULL[w.day_of_week]}</div>
+            <label className="toggle-wrap">
+              <input type="checkbox" checked={w.is_active} onChange={e=>updateWH(w.id,'is_active',e.target.checked)}/>
+              <div className="toggle-track"/>
+              <div className="toggle-thumb"/>
+            </label>
+            {w.is_active
+              ?<div style={{display:'flex',alignItems:'center',gap:6,flex:1,justifyContent:'flex-end'}}>
+                <input type="time" value={w.start_time.slice(0,5)} onChange={e=>updateWH(w.id,'start_time',e.target.value)} style={{border:'none',background:'var(--fill2)',borderRadius:7,padding:'5px 8px',fontSize:14,color:'var(--label)'}}/>
+                <span style={{color:'var(--label2)',fontSize:13}}>–</span>
+                <input type="time" value={w.end_time.slice(0,5)} onChange={e=>updateWH(w.id,'end_time',e.target.value)} style={{border:'none',background:'var(--fill2)',borderRadius:7,padding:'5px 8px',fontSize:14,color:'var(--label)'}}/>
+              </div>
+              :<span style={{fontSize:13,color:'var(--label3)',marginLeft:'auto'}}>No laboral</span>
+            }
+          </div>
+        ))}
+      </div>
+
+      <div style={{padding:'8px 16px'}}>
+        <button className="btn btn-full" style={{color:'var(--red)',fontSize:16,fontWeight:500,justifyContent:'center',background:'var(--surface)',borderRadius:16}} onClick={onLogout}>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── App root ── */
+function App(){
+  const[configReady,setConfigReady]=useState(()=>{
+    return !!(localStorage.getItem('ca_supa_url')&&localStorage.getItem('ca_supa_key')&&localStorage.getItem('ca_groq_key'));
+  });
+  const[session,setSession]=useState(null);
+  const[practitioner,setPractitioner]=useState(null);
+  const[loading,setLoading]=useState(true);
+  const[tab,setTab]=useState('chat');
+  const[ctx,setCtx]=useState(null);
+  const[history,setHistory]=useState([]);
+
+  useEffect(()=>{
+    // Single source of truth: only getSession on mount, no onAuthStateChange
+    sb.auth.getSession().then(({data})=>{
+      if(data.session){
+        setSession(data.session);
+        loadP(data.session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+  },[]);
+
+  async function loadP(uid){
+    try{
+      // Get session to access user email
+      const{data:sessionData}=await sb.auth.getSession();
+      const userEmail=sessionData?.session?.user?.email||'';
+      const userName=userEmail.split('@')[0]||'Usuario';
+
+      let{data}=await sb.from('practitioners').select('*').eq('auth_user_id',uid).maybeSingle();
+      if(!data){
+        // Auto-create practitioner row from auth user info
+        const ins=await sb.from('practitioners').insert({
+          auth_user_id:uid,
+          full_name:userName,
+          email:userEmail,
+          specialty:'',
+        }).select('*').single();
+        data=ins.data;
+      }
+      if(data){
+        setPractitioner(data);
+        const c=await dbCtx(data.id);
+        setCtx(c);
+      }
+    }catch(e){
+      console.error('loadP error',e);
+    }
+    setLoading(false);
+  }
+
+  async function logout(){
+    await sb.auth.signOut();
+    setSession(null);setPractitioner(null);setCtx(null);setHistory([]);
+  }
+
+  if(!configReady)return<ConfigSetup onDone={()=>{window.location.reload();}}/>;
+  if(loading)return(
+    <div className="loading-wrap">
+      <div className="loading-icon">📅</div>
+      <div style={{fontSize:15,color:'var(--label2)'}}>Cargando CalendApp…</div>
+    </div>
+  );
+  if(!session)return<Auth onAuth={s=>{
+    if(s){setSession(s);setLoading(true);loadP(s.user.id);}
+  }}/>;
+if(!practitioner)return(
+    <div className="loading-wrap">
+      <div className="loading-icon">📅</div>
+      <div style={{fontSize:15,color:'var(--label2)'}}>Cargando perfil…</div>
+    </div>
+  );
+
+  const TABS=[
+    {id:'chat',label:'Asistente',icon:'💬'},
+    {id:'hoy',label:'Hoy',icon:'☀️'},
+    {id:'agenda',label:'Agenda',icon:'📅'},
+    {id:'perfil',label:'Perfil',icon:'👤'},
+  ];
+
+  const chatH='calc(100vh - 49px - var(--tab-h))';
+
+  return(
+    <div className="app">
+      <div className="nav-bar">
+        <div className="nav-logo">CalendApp</div>
+        <div className="nav-page">{TABS.find(t=>t.id===tab)?.label}</div>
+      </div>
+      <div className="tab-bar">
+        <span className="tab-bar-logo">CalendApp</span>
+        {TABS.map(t=>(
+          <div key={t.id} className={`tab-item${tab===t.id?' active':''}`} onClick={()=>setTab(t.id)}>
+            <span className="tab-icon">{t.icon}</span>
+            <span className="tab-lbl">{t.label}</span>
+          </div>
+        ))}
+      </div>
+      <div className="content">
+        <div style={{display:tab==='chat'?'flex':'none',flexDirection:'column',height:chatH}}>
+          <ChatTab practitioner={practitioner} ctx={ctx} history={history} setHistory={setHistory} onCtxRefresh={setCtx}/>
+        </div>
+        {tab==='hoy'&&<HoyTab practitioner={practitioner} ctx={ctx} onCtxRefresh={setCtx}/>}
+        {tab==='agenda'&&<AgendaTab practitioner={practitioner}/>}
+        {tab==='perfil'&&<PerfilTab practitioner={practitioner} setPractitioner={setPractitioner} onLogout={logout}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

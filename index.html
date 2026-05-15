@@ -129,7 +129,7 @@ input,select,textarea{font-family:var(--font);-webkit-appearance:none}
 .error-bubble{background:#ffe5e3;color:#cc2200;padding:10px 14px;border-radius:12px;font-size:14px;margin-top:4px}
 
 /* chat input */
-.chat-input-bar{padding:8px 12px calc(8px + var(--safe-bottom));background:rgba(242,242,247,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--sep);flex-shrink:0}
+.chat-input-bar{padding:8px 12px calc(8px + var(--safe-bottom));background:rgba(242,242,247,.95);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:.5px solid var(--sep);flex-shrink:0;position:sticky;bottom:0;z-index:5}
 .chips-scroll{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;scrollbar-width:none}
 .chips-scroll::-webkit-scrollbar{display:none}
 .chip{padding:5px 13px;border-radius:20px;font-size:13px;background:var(--surface);border:.5px solid var(--sep);color:var(--label2);cursor:pointer;white-space:nowrap;flex-shrink:0}
@@ -342,7 +342,8 @@ PAQUETES: ${(ctx.pack_types||[]).map(p=>`${p.id}:${p.name}`).join('|')||'ninguno
 REGLAS:
 - Usa siempre las herramientas para leer y escribir datos reales. Nunca inventes IDs.
 - Al marcar sesiones usa el session_id exacto del contexto.
-- CREAR CLIENTE: Primero busca en la lista de clientes si ya existe alguien con ese nombre, email o WhatsApp. Si ya existe, informa al usuario y NO llames create_client. Si no existe, pide los tres datos obligatorios juntos en un solo mensaje: 1) nombre completo, 2) email, 3) WhatsApp con código de país (ej: +5215512345678). Solo llama create_client cuando tengas los tres. Si la función devuelve type='client_exists', significa que ya hay un cliente con ese email o WhatsApp: informa al usuario con el nombre del duplicado y no intentes insertar.
+- CREAR CLIENTE: 1) Verifica en la lista si ya existe alguien con ese nombre, WhatsApp o email — si existe, avisa y NO crees duplicado. 2) Si no existe, pide los 3 datos en UN solo mensaje: nombre completo, WhatsApp (con código de país, ej: +5215512345678) y email. 3) Solo llama create_client cuando tengas los 3. Si recibes client_exists en la respuesta, informa el duplicado al usuario.
+- CREAR SESIÓN: Pregunta para qué cliente es y la fecha/hora. Si el cliente existe en la lista úsalo directamente. Si el usuario quiere un cliente nuevo, primero crea el cliente (pide nombre, WhatsApp y email) y con el id que devuelve create_client, llama create_session. Nunca inventes un client_id.
 - BUSCAR CLIENTE: cuando el usuario mencione un nombre para asignar sesión, pack o recordatorio, busca coincidencias en la lista de clientes. Si hay UNA coincidencia clara, úsala directamente. Si hay DOS O MÁS coincidencias o el nombre es ambiguo, responde EXACTAMENTE con este formato JSON en tu mensaje (sin texto extra antes ni después): {"action":"select_client","matches":[{"id":"uuid","name":"Nombre Completo"},...],"intent":"create_session","intent_data":{}} — donde intent es lo que el usuario quería hacer y intent_data son los otros datos ya conocidos (fecha, hora, etc). Si NO hay ninguna coincidencia y el usuario quiere asignar algo a ese cliente, dile que no existe y pregunta si desea crearlo.
 - Sé proactivo: si hay sesiones pendientes de confirmar o sin cobrar, menciónalo brevemente.
 - Cuando pidan ver calendario usa get_calendar.
@@ -1073,7 +1074,7 @@ if(!practitioner)return(
         ))}
       </div>
       <div className="content">
-        <div style={{display:tab==='chat'?'flex':'none',flexDirection:'column',height:chatH}}>
+        <div style={{display:tab==='chat'?'flex':'none',flexDirection:'column',height:chatH,overflow:'hidden'}}>
           <ChatTab practitioner={practitioner} ctx={ctx} history={history} setHistory={setHistory} onCtxRefresh={setCtx}/>
         </div>
         {tab==='hoy'&&<HoyTab practitioner={practitioner} ctx={ctx} onCtxRefresh={setCtx}/>}

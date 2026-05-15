@@ -283,7 +283,7 @@ async function dbSessions(pid,from,to){
 const TOOLS=[
   {type:'function',function:{name:'get_dashboard',description:'Obtiene sesiones de hoy, próxima semana, pendientes de confirmar y sin cobrar. Usar al saludar o pedir resumen.',parameters:{type:'object',properties:{},required:[]}}},
   {type:'function',function:{name:'get_calendar',description:'Obtiene sesiones para un rango de fechas para mostrar calendario.',parameters:{type:'object',properties:{from:{type:'string',description:'YYYY-MM-DD'},to:{type:'string',description:'YYYY-MM-DD'}},required:['from','to']}}},
-  {type:'function',function:{name:'create_client',description:'Registra un nuevo cliente. SIEMPRE pedir nombre completo, email Y whatsapp antes de llamar esta función. Los tres son obligatorios.',parameters:{type:'object',properties:{full_name:{type:'string',description:'Nombre completo'},email:{type:'string',description:'Email del cliente'},whatsapp:{type:'string',description:'WhatsApp con código de país ej: +5215512345678'},notes:{type:'string',description:'Notas opcionales'}},required:['full_name','email','whatsapp']}}},
+  {type:'function',function:{name:'create_client',description:'Registra un nuevo cliente. ANTES de llamar: 1) verifica que no exista buscando en la lista por nombre, email o WhatsApp, 2) asegúrate de tener los tres datos obligatorios: nombre completo, email Y whatsapp. Si ya existe un cliente con el mismo email o WhatsApp, NO llamar esta función e informar al usuario.',parameters:{type:'object',properties:{full_name:{type:'string',description:'Nombre completo'},email:{type:'string',description:'Email del cliente'},whatsapp:{type:'string',description:'WhatsApp con código de país ej: +5215512345678'},notes:{type:'string',description:'Notas opcionales'}},required:['full_name','email','whatsapp']}}},
   {type:'function',function:{name:'create_session',description:'Agenda una sesión. Resuelve nombre de cliente a client_id desde el contexto.',parameters:{type:'object',properties:{client_id:{type:'string'},scheduled_at:{type:'string',description:'ISO datetime'},duration_minutes:{type:'number'},client_pack_id:{type:'string'},standalone_price:{type:'number'},notes:{type:'string'}},required:['client_id','scheduled_at']}}},
   {type:'function',function:{name:'mark_session_done',description:'Marca sesión como completed, no_show o cancelled.',parameters:{type:'object',properties:{session_id:{type:'string'},status:{type:'string',enum:['completed','no_show','cancelled']}},required:['session_id','status']}}},
   {type:'function',function:{name:'mark_paid',description:'Cambia estado de pago de una sesión.',parameters:{type:'object',properties:{session_id:{type:'string'},is_paid:{type:'boolean'}},required:['session_id','is_paid']}}},
@@ -297,6 +297,13 @@ async function runTool(name,args,pid,ctx){
   if(name==='get_dashboard'){const d=await dbCtx(pid);return{type:'dashboard',data:d};}
   if(name==='get_calendar'){const sessions=await dbSessions(pid,args.from+'T00:00:00',args.to+'T23:59:59');return{type:'calendar',data:{sessions,from:args.from,to:args.to}};}
   if(name==='create_client'){
+    const orParts=[];
+    if(args.email)orParts.push(`email.eq.${args.email}`);
+    if(args.whatsapp)orParts.push(`whatsapp.eq.${args.whatsapp}`);
+    if(orParts.length>0){
+      const{data:dup}=await sb.from('clients').select('id,full_name,email,whatsapp').eq('practitioner_id',pid).or(orParts.join(',')).limit(1).maybeSingle();
+      if(dup)return{type:'client_exists',data:dup};
+    }
     const row={practitioner_id:pid,full_name:args.full_name,email:args.email,whatsapp:args.whatsapp};
     if(args.notes&&args.notes!=='null')row.notes=args.notes;
     const{data,error}=await sb.from('clients').insert(row).select().single();
@@ -335,7 +342,7 @@ PAQUETES: ${(ctx.pack_types||[]).map(p=>`${p.id}:${p.name}`).join('|')||'ninguno
 REGLAS:
 - Usa siempre las herramientas para leer y escribir datos reales. Nunca inventes IDs.
 - Al marcar sesiones usa el session_id exacto del contexto.
-- CREAR CLIENTE: SIEMPRE pedir los tres datos antes de llamar create_client: 1) nombre completo, 2) email, 3) WhatsApp (con código de país). Pregúntalos todos juntos en un solo mensaje si no los tienes. Solo llama create_client cuando tengas los tres.
+- CREAR CLIENTE: Primero busca en la lista de clientes si ya existe alguien con ese nombre, email o WhatsApp. Si ya existe, informa al usuario y NO llames create_client. Si no existe, pide los tres datos obligatorios juntos en un solo mensaje: 1) nombre completo, 2) email, 3) WhatsApp con código de país (ej: +5215512345678). Solo llama create_client cuando tengas los tres. Si la función devuelve type='client_exists', significa que ya hay un cliente con ese email o WhatsApp: informa al usuario con el nombre del duplicado y no intentes insertar.
 - BUSCAR CLIENTE: cuando el usuario mencione un nombre para asignar sesión, pack o recordatorio, busca coincidencias en la lista de clientes. Si hay UNA coincidencia clara, úsala directamente. Si hay DOS O MÁS coincidencias o el nombre es ambiguo, responde EXACTAMENTE con este formato JSON en tu mensaje (sin texto extra antes ni después): {"action":"select_client","matches":[{"id":"uuid","name":"Nombre Completo"},...],"intent":"create_session","intent_data":{}} — donde intent es lo que el usuario quería hacer y intent_data son los otros datos ya conocidos (fecha, hora, etc). Si NO hay ninguna coincidencia y el usuario quiere asignar algo a ese cliente, dile que no existe y pregunta si desea crearlo.
 - Sé proactivo: si hay sesiones pendientes de confirmar o sin cobrar, menciónalo brevemente.
 - Cuando pidan ver calendario usa get_calendar.

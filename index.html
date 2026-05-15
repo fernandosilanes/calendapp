@@ -283,7 +283,7 @@ async function dbSessions(pid,from,to){
 const TOOLS=[
   {type:'function',function:{name:'get_dashboard',description:'Obtiene sesiones de hoy, próxima semana, pendientes de confirmar y sin cobrar. Usar al saludar o pedir resumen.',parameters:{type:'object',properties:{},required:[]}}},
   {type:'function',function:{name:'get_calendar',description:'Obtiene sesiones para un rango de fechas para mostrar calendario.',parameters:{type:'object',properties:{from:{type:'string',description:'YYYY-MM-DD'},to:{type:'string',description:'YYYY-MM-DD'}},required:['from','to']}}},
-  {type:'function',function:{name:'create_client',description:'Registra un nuevo cliente. ANTES de llamar: 1) verifica que no exista buscando en la lista por nombre, email o WhatsApp, 2) asegúrate de tener los tres datos obligatorios: nombre completo, email Y whatsapp. Si ya existe un cliente con el mismo email o WhatsApp, NO llamar esta función e informar al usuario.',parameters:{type:'object',properties:{full_name:{type:'string',description:'Nombre completo'},email:{type:'string',description:'Email del cliente'},whatsapp:{type:'string',description:'WhatsApp con código de país ej: +5215512345678'},notes:{type:'string',description:'Notas opcionales'}},required:['full_name','email','whatsapp']}}},
+  {type:'function',function:{name:'create_client',description:'Registra un nuevo cliente. Solo llamar cuando tengas los tres datos: full_name, email y whatsapp. Los tres son obligatorios.',parameters:{type:'object',properties:{full_name:{type:'string',description:'Nombre completo'},email:{type:'string',description:'Email del cliente'},whatsapp:{type:'string',description:'WhatsApp con código de país ej: +5215512345678'},notes:{type:'string',description:'Notas opcionales'}},required:['full_name','email','whatsapp']}}},
   {type:'function',function:{name:'create_session',description:'Agenda una sesión. Resuelve nombre de cliente a client_id desde el contexto.',parameters:{type:'object',properties:{client_id:{type:'string'},scheduled_at:{type:'string',description:'ISO datetime'},duration_minutes:{type:'number'},client_pack_id:{type:'string'},standalone_price:{type:'number'},notes:{type:'string'}},required:['client_id','scheduled_at']}}},
   {type:'function',function:{name:'mark_session_done',description:'Marca sesión como completed, no_show o cancelled.',parameters:{type:'object',properties:{session_id:{type:'string'},status:{type:'string',enum:['completed','no_show','cancelled']}},required:['session_id','status']}}},
   {type:'function',function:{name:'mark_paid',description:'Cambia estado de pago de una sesión.',parameters:{type:'object',properties:{session_id:{type:'string'},is_paid:{type:'boolean'}},required:['session_id','is_paid']}}},
@@ -377,6 +377,13 @@ async function agentTurn(history,sys,pid,ctx){
         const ms=wait?Math.ceil(parseFloat(wait[1])*1000)+200:3000;
         await new Promise(r=>setTimeout(r,ms));
         continue;
+      }
+      // Model failed to generate valid tool call — retry as plain text so it can ask the user
+      if(d.error.message&&(d.error.message.includes('failed_generation')||d.error.message.includes('Failed to call a function'))){
+        const rb=await fetch(GROQ_URL,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${getConfig().groqKey}`},body:JSON.stringify({model:GROQ_MODEL,messages:msgs,max_tokens:400,temperature:0.4})});
+        const rd=await rb.json();
+        const rm=rd.choices?.[0]?.message;
+        if(rm){msgs=[...msgs,rm];return{text:rm.content||'',widgets,history:msgs};}
       }
       return{text:`Error: ${d.error.message}`,widgets:[],history:msgs};
     }

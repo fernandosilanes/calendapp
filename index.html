@@ -972,7 +972,7 @@ function App(){
   const[history,setHistory]=useState([]);
 
   useEffect(()=>{
-    // Single source of truth: only getSession on mount, no onAuthStateChange
+    if(!configReady){setLoading(false);return;}
     sb.auth.getSession().then(({data})=>{
       if(data.session){
         setSession(data.session);
